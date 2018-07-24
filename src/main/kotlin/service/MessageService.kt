@@ -41,7 +41,7 @@ class MessageService {
         Message(
             id = this[MessageTable.id],
             timestamp = this[MessageTable.timestamp],
-            user = this[MessageTable.user].toString(), //TODO may need to convert to user
+            user = this[MessageTable.user].toString(),
             text = this[MessageTable.text]
         )
 }

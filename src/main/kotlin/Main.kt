@@ -5,9 +5,12 @@ import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.DefaultHeaders
 import io.ktor.gson.gson
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receive
 import io.ktor.response.respond
+import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.routing
@@ -27,6 +30,7 @@ val LOG: Logger = LoggerFactory.getLogger("ktor-chat-server")
 fun unixTime(): Long = System.currentTimeMillis() / 1000L
 
 fun main(args: Array<String>) {
+
     val messageService = MessageService()
     val userService = UserService()
 
@@ -43,9 +47,13 @@ fun main(args: Array<String>) {
         routing {
             get("/messages") {
                 catchException {
-                    call.respond(MessagesResponse(messageService.getRecentMessages()))
+                    call.respond(MessagesResponse(messageService.getRecentMessages().map {
+                        //TODO could modify the SQL query to include the users rather than patching them in later
+                        it.copy(user = userService.getUser(it.user.toLong())!!.name)
+                    }))
                 }
             }
+
             post("/message") {
                 catchException {
                     val received = call.receive<IncomingMessage>()
@@ -59,6 +67,7 @@ fun main(args: Array<String>) {
                     call.respondOkJson()
                 }
             }
+
             get("/users") {
                 catchException {
                     call.respond(UsersResponse(userService.getUsers()))
@@ -73,15 +82,14 @@ private suspend fun ApplicationCall.respondOkJson(value: Boolean = true) =
     respond("""{"ok": "$value"}""")
 
 private suspend fun <R> PipelineContext<*, ApplicationCall>.catchException(block: suspend () -> R): R? {
-    return block()
-//    return try {
-//        block()
-//    } catch (e: Exception) {
-//        call.respondText(
-//            """{"error":"$e"}""",
-//            ContentType.parse("application/json"),
-//            HttpStatusCode.InternalServerError
-//        )
-//        null
-//    }
+    return try {
+        block()
+    } catch (e: Exception) {
+        call.respondText(
+            """{"error":"$e"}""",
+            ContentType.parse("application/json"),
+            HttpStatusCode.InternalServerError
+        )
+        null
+    }
 }
