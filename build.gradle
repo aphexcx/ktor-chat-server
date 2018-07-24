@@ -29,6 +29,8 @@ repositories {
     mavenCentral()
     jcenter()
     maven { url "https://dl.bintray.com/kotlin/ktor" }
+    maven { url = "https://dl.bintray.com/kotlin/kotlinx" }
+    maven { url = "https://dl.bintray.com/kotlin/exposed" }
 }
 
 dependencies {
@@ -37,6 +39,10 @@ dependencies {
     implementation "io.ktor:ktor:$ktor_version"
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-gson:$ktor_version"
+
+    implementation "com.h2database:h2:1.4.196"
+    implementation "org.jetbrains.exposed:exposed:0.10.4"
+    implementation 'com.zaxxer:HikariCP:3.2.0'
 
     def kotlinx_html_version = "0.6.11"
     compile "org.jetbrains.kotlinx:kotlinx-html-jvm:${kotlinx_html_version}"
