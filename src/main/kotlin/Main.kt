@@ -5,12 +5,9 @@ import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.DefaultHeaders
 import io.ktor.gson.gson
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
 import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receive
 import io.ktor.response.respond
-import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.routing
@@ -18,6 +15,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import model.IncomingMessage
 import model.MessagesResponse
+import model.User
 import model.UsersResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -52,7 +50,12 @@ fun main(args: Array<String>) {
                 catchException {
                     val received = call.receive<IncomingMessage>()
                     println("Received Post Request: $received")
-                    messageService.addMessage(received)
+                    val existingUser: User? = userService.getUser(received.user)
+
+                    val userId: Long =
+                        existingUser?.id ?: userService.addUser(received.user).id
+
+                    messageService.addMessage(received, userId)
                     call.respondOkJson()
                 }
             }
@@ -66,18 +69,19 @@ fun main(args: Array<String>) {
     server.start(wait = true)
 }
 
-private suspend fun ApplicationCall.respondOkJson(value: Boolean = true) = respond("""{"ok": "$value"}""")
+private suspend fun ApplicationCall.respondOkJson(value: Boolean = true) =
+    respond("""{"ok": "$value"}""")
 
-//TODO
 private suspend fun <R> PipelineContext<*, ApplicationCall>.catchException(block: suspend () -> R): R? {
-    return try {
-        block()
-    } catch (e: Exception) {
-        call.respondText(
-            """{"error":"$e"}""",
-            ContentType.parse("application/json"),
-            HttpStatusCode.InternalServerError
-        )
-        null
-    }
+    return block()
+//    return try {
+//        block()
+//    } catch (e: Exception) {
+//        call.respondText(
+//            """{"error":"$e"}""",
+//            ContentType.parse("application/json"),
+//            HttpStatusCode.InternalServerError
+//        )
+//        null
+//    }
 }

@@ -1,11 +1,9 @@
 package service
 
 import db.Database.dbQuery
-import db.insertOrUpdate
 import model.IncomingMessage
 import model.Message
 import model.MessageTable
-import model.UserTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
@@ -25,21 +23,13 @@ class MessageService {
             .singleOrNull()
     }
 
-    suspend fun addMessage(incomingMessage: IncomingMessage): Message {
+    suspend fun addMessage(incomingMessage: IncomingMessage, userId: Long): Message {
         var key: Long? = 0
-        var userId: Long? = 0
-
-        //
-        dbQuery {
-            userId = UserTable.insertOrUpdate(UserTable.name) {
-                it[name] = incomingMessage.user
-            } get UserTable.id
-        }
 
         dbQuery {
             key = MessageTable.insert {
                 it[timestamp] = unixTime()
-                it[user] = userId!!
+                it[user] = userId
                 it[text] = incomingMessage.text
             } get MessageTable.id
         }
