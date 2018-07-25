@@ -1,4 +1,5 @@
 import db.Database
+import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
@@ -29,53 +30,56 @@ val LOG: Logger = LoggerFactory.getLogger("ktor-chat-server")
 
 fun unixTime(): Long = System.currentTimeMillis() / 1000L
 
-fun main(args: Array<String>) {
+fun Application.module() {
+    install(DefaultHeaders)
+    install(ContentNegotiation) {
+        gson {
+            setPrettyPrinting()
+        }
+    }
 
     val messageService = MessageService()
     val userService = UserService()
+    Database.init()
 
-    val server = embeddedServer(Netty, port = 8081) {
-        install(DefaultHeaders)
-        install(ContentNegotiation) {
-            gson {
-                setPrettyPrinting()
+    routing {
+        get("/messages") {
+            catchException {
+                call.respond(MessagesResponse(messageService.getRecentMessages().map {
+                    //TODO could modify the SQL query to include the users rather than patching them in later
+                    it.copy(user = userService.getUser(it.user.toLong())!!.name)
+                }))
             }
         }
 
-        Database.init()
+        post("/message") {
+            catchException {
+                val received = call.receive<IncomingMessage>()
+                println("Received Post Request: $received")
+                val existingUser: User? = userService.getUser(received.user)
 
-        routing {
-            get("/messages") {
-                catchException {
-                    call.respond(MessagesResponse(messageService.getRecentMessages().map {
-                        //TODO could modify the SQL query to include the users rather than patching them in later
-                        it.copy(user = userService.getUser(it.user.toLong())!!.name)
-                    }))
-                }
+                val userId: Long =
+                    existingUser?.id ?: userService.addUser(received.user).id
+
+                messageService.addMessage(received, userId)
+                call.respondOkJson()
             }
+        }
 
-            post("/message") {
-                catchException {
-                    val received = call.receive<IncomingMessage>()
-                    println("Received Post Request: $received")
-                    val existingUser: User? = userService.getUser(received.user)
-
-                    val userId: Long =
-                        existingUser?.id ?: userService.addUser(received.user).id
-
-                    messageService.addMessage(received, userId)
-                    call.respondOkJson()
-                }
-            }
-
-            get("/users") {
-                catchException {
-                    call.respond(UsersResponse(userService.getUsers()))
-                }
+        get("/users") {
+            catchException {
+                call.respond(UsersResponse(userService.getUsers()))
             }
         }
     }
-    server.start(wait = true)
+}
+
+fun main(args: Array<String>) {
+    embeddedServer(Netty,
+        port = 8081,
+        watchPaths = listOf("MainKt"),
+        module = Application::module)
+        .start(wait = true)
 }
 
 private suspend fun ApplicationCall.respondOkJson(value: Boolean = true) =

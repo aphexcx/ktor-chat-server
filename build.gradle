@@ -48,4 +48,6 @@ dependencies {
     compile "org.jetbrains.kotlinx:kotlinx-html-jvm:${kotlinx_html_version}"
 
     testImplementation group: 'junit', name: 'junit', version: '4.12'
+    testImplementation "io.ktor:ktor-server-test-host:$ktor_version"
+
 }
