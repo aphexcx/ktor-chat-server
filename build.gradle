@@ -1,4 +1,4 @@
-group 'TeslaChat'
+group 'KtorChat'
 version '1.0.0'
 
 buildscript {
