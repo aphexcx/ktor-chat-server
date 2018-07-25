@@ -9,18 +9,12 @@ object MessageTable : Table() {
     val text = text("text")
 }
 
-object UserTable : Table() {
-    val id = long("id").primaryKey().autoIncrement()
-    val name = varchar("user", 255)
-}
-
 data class Message(
     @Transient val id: Long,
     val timestamp: Long,
     val user: String,
     val text: String
 )
-
 
 data class IncomingMessage(
     val user: String,
